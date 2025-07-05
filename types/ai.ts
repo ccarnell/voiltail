@@ -45,18 +45,22 @@ export interface DivergentSection {
 
 export interface ConsensusAnalysis {
   unifiedResponse: string;
-  agreementLevel: number; // 0-100
+  alignment: AlignmentData;
   alignedPoints: AlignedPoint[];
   divergentSections: DivergentSection[];
-  confidence: number;
   originalResponses: ModelResponse[];
 }
 
 export interface AlignmentData {
-  gemini: number;
-  chatgpt: number;
-  claude: number;
+  semantic: number; // 0-1 (cosine similarity of embeddings)
+  surface: number; // 0-1 (Jaccard similarity)
+  gemini: 'high' | 'moderate' | 'low';
+  chatgpt: 'high' | 'moderate' | 'low';
+  claude: 'high' | 'moderate' | 'low';
   overallAlignment: 'high' | 'moderate' | 'low';
+  description: string; // e.g., "Strong semantic alignment with diverse expression"
+  methodology: 'semantic-similarity-v2' | 'word-overlap-v1';
+  alignedPoints: AlignedPoint[]; // Move aligned points here
 }
 
 // Utility function to convert File to base64
