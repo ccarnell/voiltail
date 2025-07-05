@@ -97,8 +97,9 @@ export default function ConsensusPage() {
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
             <span>
-              This synthesis combines outputs from multiple AI models for research purposes. 
-              Model agreement may reflect shared training data limitations. Always verify 
+              This synthesis combines outputs from multiple AI models for exploratory purposes. 
+              Model agreement may reflect shared training data limitations. 
+              <i> More Aligned</i> does not necessarily mean <b>More True</b>. Always verify 
               important information from primary sources.
             </span>
           </div>
@@ -290,18 +291,18 @@ export default function ConsensusPage() {
               </div>
             </div>
             
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-left gap-3">
               <Badge variant="outline" className="text-blue-400 border-blue-400/30 text-xs">
                 <div className="w-2 h-2 bg-blue-400 rounded-full mr-1" />
-                Gemini
+                Gemini 1.5 Flash
               </Badge>
               <Badge variant="outline" className="text-green-400 border-green-400/30 text-xs">
                 <div className="w-2 h-2 bg-green-400 rounded-full mr-1" />
-                ChatGPT
+                ChatGPT 4o
               </Badge>
               <Badge variant="outline" className="text-orange-400 border-orange-400/30 text-xs">
                 <div className="w-2 h-2 bg-orange-400 rounded-full mr-1" />
-                Claude
+                Claude Sonnet 4
               </Badge>
             </div>
           </form>

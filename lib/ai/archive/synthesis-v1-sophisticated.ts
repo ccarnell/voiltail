@@ -1,15 +1,20 @@
 import type { ModelResponse, ConsensusAnalysis, AlignedPoint, DivergentSection, AlignmentData } from '@/types/ai';
-import { calculateJaccardSimilarity } from './embeddings';
+import { calculateSemanticSimilarity, calculateJaccardSimilarity } from './embeddings';
+import { createGPT4Synthesis } from './gpt-synthesis';
 
 export async function synthesizeResponses(
   responses: ModelResponse[]
 ): Promise<ConsensusAnalysis> {
-  // Calculate alignment with aligned points (fast - no external API calls)
+  // Calculate alignment with aligned points
   const alignmentResult = await calculateAlignment(responses);
   const divergences = findDivergences(responses);
   
-  // Create a fast rule-based synthesis instead of GPT-4
-  const unifiedResponse = createFastSynthesis(responses, alignmentResult);
+  // Create a unified response using GPT-4 synthesis
+  const unifiedResponse = await createGPT4Synthesis(responses, {
+    semantic: alignmentResult.semantic,
+    surface: alignmentResult.surface,
+    overallAlignment: alignmentResult.overallAlignment
+  });
   
   return {
     unifiedResponse,
@@ -20,41 +25,12 @@ export async function synthesizeResponses(
   };
 }
 
-function createFastSynthesis(responses: ModelResponse[], alignment: AlignmentData): string {
-  const validResponses = responses.filter(r => !r.content.startsWith('Error:'));
-  
-  if (validResponses.length === 0) {
-    return "All AI models encountered errors. Please try again or check your API configuration.";
-  }
-  
-  if (validResponses.length === 1) {
-    return validResponses[0].content;
-  }
-  
-  // Fast synthesis based on alignment level
-  if (alignment.overallAlignment === 'high') {
-    // High alignment - pick the most comprehensive response
-    const longest = validResponses.reduce((prev, current) => 
-      current.content.length > prev.content.length ? current : prev
-    );
-    return `**Consensus Response** (${alignment.description}):\n\n${longest.content}`;
-  } else {
-    // Lower alignment - combine key points
-    const intro = `**Multi-Model Analysis** (${alignment.description}):\n\n`;
-    const modelSections = validResponses.map(r => 
-      `**${r.model.charAt(0).toUpperCase() + r.model.slice(1)}**: ${r.content.substring(0, 300)}${r.content.length > 300 ? '...' : ''}`
-    ).join('\n\n');
-    
-    return intro + modelSections;
-  }
-}
-
 
 async function calculateAlignment(responses: ModelResponse[]): Promise<AlignmentData> {
   const contents = responses.map(r => r.content);
   
-  // Calculate fast semantic similarity without external API calls
-  const semantic = calculateFastSemanticSimilarity(contents);
+  // Calculate semantic similarity using embeddings
+  const semantic = await calculateSemanticSimilarity(contents);
   
   // Calculate surface-level similarity using Jaccard index
   const surface = calculateJaccardSimilarity(contents);
@@ -253,37 +229,6 @@ function calculateFormality(text: string): number {
   );
   
   return Math.min(1, (avgSentenceLength / 20) + (technicalCount / 10));
-}
-
-function calculateFastSemanticSimilarity(contents: string[]): number {
-  if (contents.length < 2) return 1.0;
-  
-  // Fast semantic similarity based on keyword overlap and structure
-  const keywordSets = contents.map(content => {
-    const words = content.toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
-      .filter(word => word.length > 3 && !isCommonWord(word));
-    return new Set(words);
-  });
-  
-  // Calculate average pairwise similarity
-  let totalSimilarity = 0;
-  let pairCount = 0;
-  
-  for (let i = 0; i < keywordSets.length; i++) {
-    for (let j = i + 1; j < keywordSets.length; j++) {
-      const set1 = keywordSets[i];
-      const set2 = keywordSets[j];
-      const intersection = new Set([...set1].filter(x => set2.has(x)));
-      const union = new Set([...set1, ...set2]);
-      const similarity = union.size > 0 ? intersection.size / union.size : 0;
-      totalSimilarity += similarity;
-      pairCount++;
-    }
-  }
-  
-  return pairCount > 0 ? totalSimilarity / pairCount : 0;
 }
 
 

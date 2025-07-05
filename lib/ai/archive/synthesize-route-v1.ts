@@ -95,101 +95,24 @@ async function callModel(
   const startTime = Date.now();
   
   try {
-    let content: string;
-    
-    if (model === 'openai') {
-      const { default: OpenAI } = await import('openai');
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-      
-      const userContent: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [];
-      userContent.push({ type: 'text', text: prompt });
-      
-      if (attachments && attachments.length > 0) {
-        attachments.forEach((attachment) => {
-          if (attachment.type === 'image') {
-            userContent.push({
-              type: 'image_url',
-              image_url: {
-                url: `data:${attachment.mimeType};base64,${attachment.base64}`
-              }
-            });
-          }
-        });
-      }
-      
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: userContent }],
-        max_tokens: 4000,
-      });
-      
-      content = completion.choices[0]?.message?.content || 'No response';
-      
-    } else if (model === 'gemini') {
-      const { GoogleGenerativeAI } = await import('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
-      const geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      
-      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
-      parts.push({ text: prompt });
-      
-      if (attachments && attachments.length > 0) {
-        attachments.forEach((attachment) => {
-          if (attachment.type === 'image') {
-            parts.push({
-              inlineData: {
-                mimeType: attachment.mimeType,
-                data: attachment.base64
-              }
-            });
-          }
-        });
-      }
-      
-      const result = await geminiModel.generateContent(parts);
-      const response = await result.response;
-      content = response.text();
-      
-    } else { // claude
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-      
-      const messageContent: Array<{ type: 'text'; text: string } | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }> = [];
-      messageContent.push({ type: 'text', text: prompt });
-      
-      if (attachments && attachments.length > 0) {
-        attachments.forEach((attachment) => {
-          if (attachment.type === 'image') {
-            // Ensure media_type is one of the allowed values
-            const mediaType = attachment.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-            messageContent.push({
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: attachment.base64
-              }
-            });
-          }
-        });
-      }
-      
-      const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: messageContent }]
-      });
-      
-      content = response.content[0]?.type === 'text' 
-        ? response.content[0].text 
-        : 'No response';
+    // Use localhost directly to avoid CORS issues
+    const response = await fetch(`http://localhost:3000/api/ai/models/${model}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, attachments: attachments || [] })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
-    
+
+    const data = await response.json();
     const responseTime = Date.now() - startTime;
     
     return {
       model,
-      content,
+      content: data.response || 'No response received',
       responseTime
     };
   } catch (error) {

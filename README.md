@@ -171,10 +171,11 @@ npm start
 
 ## 📈 Performance
 
-- **Synthesis Time**: 25-35 seconds (3 AI models + embeddings + GPT-4)
+- **Synthesis Time**: 5-8 seconds (3 AI models + fast local analysis)
 - **Semantic Accuracy**: 85-95% on related topics
 - **Error Rate**: <5% with graceful recovery
 - **Concurrent Users**: Scales with Vercel serverless functions
+- **Vercel Compatible**: Optimized for 10s hobby plan timeout limits
 
 ## 🤝 Contributing
 
