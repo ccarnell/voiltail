@@ -1,6 +1,6 @@
 import type { ModelResponse, ConsensusAnalysis, AlignedPoint, DivergentSection, AlignmentData } from '@/types/ai';
-import { calculateSemanticSimilarity, calculateJaccardSimilarity } from './embeddings';
-import { createGPT4Synthesis } from './gpt-synthesis';
+import { calculateSemanticSimilarity, calculateJaccardSimilarity } from './embeddings-v1-openai';
+import { createGPT4Synthesis } from './gpt-synthesis-v1';
 
 export async function synthesizeResponses(
   responses: ModelResponse[]
