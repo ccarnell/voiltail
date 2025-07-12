@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-LLM Interface Concepts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+            transition: background 0.5s ease;
+        }
+
+        .mode-selector {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 100px;
+            backdrop-filter: blur(10px);
+        }
+
+        .mode-btn {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        /* Consensus Mode Styles */
+        .consensus-mode {
+            min-height: 100vh;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .consensus-mode.active {
+            display: flex;
+        }
+
+        .input-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 60px;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 20px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 16px;
+            resize: none;
+            min-height: 120px;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .submit-btn {
+            margin-top: 16px;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .consensus-result {
+            max-width: 800px;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 1s ease 0.5s forwards;
+        }
+
+        .primary-consensus {
+            font-size: 32px;
+            font-weight: 300;
+            line-height: 1.5;
+            margin-bottom: 40px;
+            background: linear-gradient(135deg, #ffffff 0%, #999999 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .agreement-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 100px;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .confidence-bar {
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 85%;
+            transition: width 1s ease;
+        }
+
+        .secondary-points {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .consensus-point {
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            text-align: left;
+            font-size: 16px;
+            line-height: 1.6;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .consensus-point:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Divergence Mode Styles */
+        .divergence-mode {
+            min-height: 100vh;
+            display: none;
+            position: relative;
+            padding: 100px 40px 40px;
+        }
+
+        .divergence-mode.active {
+            display: block;
+            background: radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%);
+        }
+
+        .divergence-input {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .divergence-canvas {
+            position: relative;
+            width: 100%;
+            height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .node {
+            position: absolute;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            max-width: 250px;
+        }
+
+        .node:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: scale(1.05);
+            z-index: 100;
+        }
+
+        .node.agreement {
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .node.disagreement {
+            border-color: rgba(234, 102, 102, 0.5);
+            box-shadow: 0 0 20px rgba(234, 102, 102, 0.2);
+        }
+
+        .node.unique {
+            border-color: rgba(102, 234, 169, 0.5);
+            box-shadow: 0 0 20px rgba(102, 234, 169, 0.2);
+        }
+
+        .connection {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform-origin: left center;
+            pointer-events: none;
+        }
+
+        .llm-indicator {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .llm-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+
+        .llm-dot.active {
+            opacity: 1;
+        }
+
+        .llm-dot.claude { background: #667eea; }
+        .llm-dot.gpt { background: #10a37f; }
+        .llm-dot.gemini { background: #4285f4; }
+
+        .exploration-controls {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <!-- Mode Selector -->
+    <div class="mode-selector">
+        <button class="mode-btn active" onclick="switchMode('consensus')">Consensus Mode</button>
+        <button class="mode-btn" onclick="switchMode('divergence')">Divergence Mode</button>
+    </div>
+
+    <!-- Consensus Mode -->
+    <div class="consensus-mode active">
+        <div class="input-container">
+            <textarea class="input-field" placeholder="Enter your prompt for multi-LLM consensus analysis..."></textarea>
+            <button class="submit-btn" onclick="processConsensus()">Find Consensus</button>
+        </div>
+
+        <div class="consensus-result" id="consensusResult" style="display: none;">
+            <div class="agreement-indicator">
+                <span>Agreement Level</span>
+                <div class="confidence-bar">
+                    <div class="confidence-fill"></div>
+                </div>
+                <span>85%</span>
+            </div>
+
+            <h1 class="primary-consensus">
+                The most effective approach combines iterative development with continuous user feedback, prioritizing core functionality before scaling.
+            </h1>
+
+            <div class="secondary-points">
+                <div class="consensus-point">
+                    <strong>High Agreement:</strong> Start with a minimal viable product that addresses the primary user need
+                </div>
+                <div class="consensus-point" style="opacity: 0.8;">
+                    <strong>Moderate Agreement:</strong> Implement analytics early to measure user engagement patterns
+                </div>
+                <div class="consensus-point" style="opacity: 0.6;">
+                    <strong>Partial Agreement:</strong> Consider A/B testing for feature prioritization after initial launch
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-indicator" id="consensusLoading">
+            <div class="loading-dots">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Divergence Mode -->
+    <div class="divergence-mode">
+        <div class="divergence-input">
+            <textarea class="input-field" placeholder="Enter your prompt to explore LLM divergences..."></textarea>
+            <button class="submit-btn" onclick="processDivergence()">Explore Divergences</button>
+        </div>
+
+        <div class="divergence-canvas" id="divergenceCanvas" style="display: none;">
+            <!-- Central Input Node -->
+            <div class="node" style="top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.1);">
+                <strong>Your Query</strong><br>
+                <em style="font-size: 12px; opacity: 0.7;">Click nodes to explore</em>
+            </div>
+
+            <!-- Agreement Nodes -->
+            <div class="node agreement" style="top: 20%; left: 30%;">
+                <span>All models agree on importance of user-centric design</span>
+                <div class="llm-indicator">
+                    <div class="llm-dot claude active"></div>
+                    <div class="llm-dot gpt active"></div>
+                    <div class="llm-dot gemini active"></div>
+                </div>
+            </div>
+
+            <!-- Disagreement Nodes -->
+            <div class="node disagreement" style="top: 30%; left: 70%;">
+                <span>Implementation approach differs: Agile vs Waterfall methodology</span>
+                <div class="llm-indicator">
+                    <div class="llm-dot claude active"></div>
+                    <div class="llm-dot gpt"></div>
+                    <div class="llm-dot gemini active"></div>
+                </div>
+            </div>
+
+            <div class="node disagreement" style="top: 60%; left: 20%;">
+                <span>Technology stack recommendations vary significantly</span>
+                <div class="llm-indicator">
+                    <div class="llm-dot claude"></div>
+                    <div class="llm-dot gpt active"></div>
+                    <div class="llm-dot gemini active"></div>
+                </div>
+            </div>
+
+            <!-- Unique Contribution Nodes -->
+            <div class="node unique" style="top: 70%; left: 65%;">
+                <span>Only Claude mentioned: Consider accessibility compliance early</span>
+                <div class="llm-indicator">
+                    <div class="llm-dot claude active"></div>
+                    <div class="llm-dot gpt"></div>
+                    <div class="llm-dot gemini"></div>
+                </div>
+            </div>
+
+            <div class="node unique" style="top: 40%; left: 85%;">
+                <span>Only GPT suggested: Implement progressive web app features</span>
+                <div class="llm-indicator">
+                    <div class="llm-dot claude"></div>
+                    <div class="llm-dot gpt active"></div>
+                    <div class="llm-dot gemini"></div>
+                </div>
+            </div>
+
+            <!-- Connections -->
+            <div class="connection" style="top: 50%; left: 50%; width: 200px; transform: rotate(-45deg);"></div>
+            <div class="connection" style="top: 50%; left: 50%; width: 180px; transform: rotate(45deg);"></div>
+            <div class="connection" style="top: 50%; left: 50%; width: 220px; transform: rotate(-70deg);"></div>
+            <div class="connection" style="top: 50%; left: 50%; width: 250px; transform: rotate(20deg);"></div>
+        </div>
+
+        <div class="exploration-controls" id="explorationControls" style="display: none;">
+            <button class="control-btn">Filter by Confidence</button>
+            <button class="control-btn">Show Only Disagreements</button>
+            <button class="control-btn">Trace Reasoning</button>
+            <button class="control-btn">Export Analysis</button>
+        </div>
+    </div>
+
+    <script>
+        function switchMode(mode) {
+            // Update button states
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Switch displays
+            if (mode === 'consensus') {
+                document.querySelector('.consensus-mode').classList.add('active');
+                document.querySelector('.divergence-mode').classList.remove('active');
+                document.body.style.background = '#0a0a0a';
+            } else {
+                document.querySelector('.consensus-mode').classList.remove('active');
+                document.querySelector('.divergence-mode').classList.add('active');
+                document.body.style.background = 'radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%)';
+            }
+        }
+
+        function processConsensus() {
+            const loading = document.getElementById('consensusLoading');
+            const result = document.getElementById('consensusResult');
+            const input = document.querySelector('.consensus-mode .input-container');
+            
+            input.style.opacity = '0.3';
+            loading.style.display = 'block';
+            
+            setTimeout(() => {
+                loading.style.display = 'none';
+                input.style.display = 'none';
+                result.style.display = 'block';
+            }, 2000);
+        }
+
+        function processDivergence() {
+            const canvas = document.getElementById('divergenceCanvas');
+            const controls = document.getElementById('explorationControls');
+            const input = document.querySelector('.divergence-input');
+            
+            input.style.opacity = '0';
+            
+            setTimeout(() => {
+                input.style.display = 'none';
+                canvas.style.display = 'flex';
+                controls.style.display = 'flex';
+                
+                // Animate nodes appearing
+                const nodes = canvas.querySelectorAll('.node');
+                nodes.forEach((node, index) => {
+                    node.style.opacity = '0';
+                    node.style.transform = node.style.transform + ' scale(0.8)';
+                    setTimeout(() => {
+                        node.style.transition = 'all 0.5s ease';
+                        node.style.opacity = '1';
+                        node.style.transform = node.style.transform.replace('scale(0.8)', 'scale(1)');
+                    }, index * 100);
+                });
+            }, 500);
+        }
+
+        // Add hover interactions
+        document.addEventListener('DOMContentLoaded', () => {
+            const nodes = document.querySelectorAll('.node');
+            nodes.forEach(node => {
+                node.addEventListener('click', () => {
+                    // In a real implementation, this would expand to show more details
+                    node.style.transform = 'scale(1.1)';
+                    setTimeout(() => {
+                        node.style.transform = 'scale(1)';
+                    }, 300);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { synthesizeWithErrorHandling } from '@/lib/ai/synthesis';
+import { persistentCostTracker } from '@/lib/persistent-cost-tracking';
 import type { ModelResponse, FileAttachment } from '@/types/ai';
 
 export async function POST(request: Request) {
   try {
-    const { prompt, attachments } = await request.json();
+    const { prompt, attachments, mode = 'pro' } = await request.json();
     
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
     }
 
     console.log('🚀 Starting synthesis for prompt:', prompt.substring(0, 100) + '...');
+    console.log(`🔧 Using ${mode} mode synthesis`);
 
     // Call all three models in parallel
     const modelCalls = [
@@ -68,14 +70,19 @@ export async function POST(request: Request) {
     // Synthesize the responses
     const analysis = await synthesizeWithErrorHandling(responsesToSynthesize);
     
+    // Track costs and performance
+    const finalTime = Date.now() - startTime;
+    const cost = persistentCostTracker.trackQuery(mode as 'basic' | 'pro', finalTime);
+    
     console.log(`✨ Synthesis complete with ${analysis.alignment.overallAlignment} alignment: ${analysis.alignment.description}`);
 
     return NextResponse.json({ 
       analysis,
       metadata: {
-        totalTime,
+        totalTime: finalTime,
         modelCount: responsesToSynthesize.length,
-        hasErrors: responses.some(r => r.content.startsWith('Error:'))
+        hasErrors: responses.some(r => r.content.startsWith('Error:')),
+        estimatedCost: cost.total
       }
     });
   } catch (error) {
@@ -175,7 +182,7 @@ async function callModel(
       }
       
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
         messages: [{ role: 'user', content: messageContent }]
       });

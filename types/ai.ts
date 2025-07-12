@@ -59,7 +59,7 @@ export interface AlignmentData {
   claude: 'high' | 'moderate' | 'low';
   overallAlignment: 'high' | 'moderate' | 'low';
   description: string; // e.g., "Strong semantic alignment with diverse expression"
-  methodology: 'semantic-similarity-v2' | 'word-overlap-v1';
+  methodology: 'semantic-similarity-v2' | 'word-overlap-v1' | 'markdown-ready-v1.0';
   alignedPoints: AlignedPoint[]; // Move aligned points here
 }
 

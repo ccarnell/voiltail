@@ -8,7 +8,7 @@ export async function createGPT4Synthesis(
 ): Promise<string> {
   try {
     const synthesisPrompt = createSynthesisPrompt(responses, alignmentData);
-    
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -20,16 +20,26 @@ export async function createGPT4Synthesis(
         messages: [
           {
             role: 'system',
-            content: `You are an expert research synthesizer. Your job is to analyze multiple AI responses and create a unified synthesis that combines the best insights from each response.
+            content: `You are an expert research synthesizer. Your job is to analyze multiple AI responses and create a unified synthesis following this EXACT format:
 
-Guidelines:
-- Identify areas of agreement and disagreement
-- Combine complementary insights
-- Note any contradictions or varying perspectives
-- Create a balanced, comprehensive answer
-- Maintain the collective intelligence of all models
-- Use clear, professional language
-- Structure the response logically`
+            CRITICAL FORMAT REQUIREMENTS:
+            1. Start with a 1-2 sentence summary (NO "## Synthesis..." header)
+            2. Follow with consensus areas where models agreed
+            3. Place "Divergent Views" section at the BOTTOM (not after summary)
+            4. End with a conclusion
+
+            STRUCTURE:
+            - Begin directly with the main takeaway (1-2 sentences)
+            - Use ## for main sections like "## Consensus Areas"
+            - Use ### for subsections
+            - Place "## Divergent Views" near the end
+            - End with "## Conclusion"
+            - Use **bold** for emphasis
+            - Use bullet points for lists
+            - Maintain professional markdown structure
+
+            DO NOT include "## Synthesis of AI Model Responses" header.
+            DO NOT put Divergent Views immediately after the summary.`
           },
           {
             role: 'user',
@@ -59,7 +69,7 @@ function createSynthesisPrompt(
   alignmentData: { semantic: number; surface: number; overallAlignment: string }
 ): string {
   const alignmentContext = getAlignmentContext(alignmentData);
-  
+
   return `Please synthesize these three AI model responses into a unified, comprehensive answer:
 
 **Alignment Analysis**: ${alignmentContext}
@@ -86,7 +96,7 @@ ${responses.find(r => r.model === 'claude')?.content || 'No response'}
 function getAlignmentContext(alignmentData: { semantic: number; surface: number; overallAlignment: string }): string {
   const semanticLevel = alignmentData.semantic > 0.8 ? 'high' : alignmentData.semantic > 0.6 ? 'moderate' : 'low';
   const surfaceLevel = alignmentData.surface > 0.3 ? 'high' : alignmentData.surface > 0.15 ? 'moderate' : 'low';
-  
+
   if (semanticLevel === 'high' && surfaceLevel === 'high') {
     return 'Models show strong agreement in both meaning and expression';
   } else if (semanticLevel === 'high' && surfaceLevel === 'low') {
@@ -102,14 +112,14 @@ function getAlignmentContext(alignmentData: { semantic: number; surface: number;
 
 function createFallbackSynthesis(responses: ModelResponse[]): string {
   const intro = 'Based on analysis from multiple AI models, here is a synthesis of their responses:';
-  
+
   const sections = responses.map((response) => {
     const modelName = response.model.charAt(0).toUpperCase() + response.model.slice(1);
     return `**${modelName} Perspective**: ${response.content.substring(0, 200)}...`;
   });
-  
+
   const conclusion = 'This synthesis combines insights from multiple AI models to provide a comprehensive perspective.';
-  
+
   return [intro, '', ...sections, '', conclusion].join('\n');
 }
 
