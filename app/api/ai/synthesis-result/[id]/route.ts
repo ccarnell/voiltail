@@ -24,8 +24,9 @@ export async function GET(
       );
     }
 
-    // Clean up the result after retrieval (one-time use)
-    resultStorage.delete(id);
+    // Don't delete immediately - let TTL handle cleanup
+    // This prevents race conditions with frontend retries
+    // resultStorage.delete(id);
 
     return NextResponse.json({
       analysis: result,

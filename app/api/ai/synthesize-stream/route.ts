@@ -148,8 +148,9 @@ async function synthesizeWithStreaming(
     const finalTime = Date.now() - startTime;
     const cost = persistentCostTracker.trackQuery('pro', finalTime);
     
-    // Store the result and send simple completion event
+    // Store the result and send completion event with better logging
     const resultId = resultStorage.store(analysis);
+    console.log(`🎯 Synthesis complete, stored result ${resultId}`);
     
     controller.enqueue(encoder.encode(`data: ${JSON.stringify({
       type: 'synthesis_complete',
@@ -217,7 +218,7 @@ async function callModelWithProgress(
     } else if (model === 'gemini') {
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
-      const geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
       
       const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
       parts.push({ text: prompt });
@@ -263,7 +264,7 @@ async function callModelWithProgress(
       }
       
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
         messages: [{ role: 'user', content: messageContent }]
       });

@@ -135,7 +135,7 @@ async function callModel(
     } else if (model === 'gemini') {
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
-      const geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
       
       const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
       parts.push({ text: prompt });

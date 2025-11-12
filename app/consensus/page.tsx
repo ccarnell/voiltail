@@ -173,24 +173,43 @@ export default function ConsensusPage() {
                     setProcessingTime(totalTime);
                     setEstimatedCost(data.metadata.estimatedCost || 0.09);
 
-                    // Fetch the actual result
-                    try {
-                      const resultResponse = await fetch(`/api/ai/synthesis-result/${data.resultId}`);
-                      if (!resultResponse.ok) {
-                        throw new Error('Failed to fetch synthesis result');
+                    // Fetch the actual result with retry logic
+                    let retries = 3;
+                    let fetchSuccess = false;
+                    
+                    while (retries > 0 && !fetchSuccess) {
+                      try {
+                        console.log(`Fetching result ${data.resultId}, attempts remaining: ${retries}`);
+                        const resultResponse = await fetch(`/api/ai/synthesis-result/${data.resultId}`);
+                        
+                        if (!resultResponse.ok) {
+                          const errorData = await resultResponse.text();
+                          console.error(`Result fetch failed: ${resultResponse.status} - ${errorData}`);
+                          throw new Error(`Failed to fetch synthesis result: ${resultResponse.status}`);
+                        }
+                        
+                        const resultData = await resultResponse.json();
+                        console.log('Successfully fetched synthesis result');
+                        
+                        // Add new conversation to the list
+                        setConversations(prev => [...prev, {
+                          prompt: currentPrompt,
+                          analysis: resultData.analysis,
+                          showDetails: false
+                        }]);
+                        
+                        fetchSuccess = true;
+                      } catch (fetchError) {
+                        console.error(`Error fetching result (attempt ${4-retries}):`, fetchError);
+                        retries--;
+                        
+                        if (retries > 0) {
+                          // Wait 1 second before retry
+                          await new Promise(resolve => setTimeout(resolve, 1000));
+                        } else {
+                          setError(`Failed to retrieve synthesis result after 3 attempts: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+                        }
                       }
-                      
-                      const resultData = await resultResponse.json();
-                      
-                      // Add new conversation to the list
-                      setConversations(prev => [...prev, {
-                        prompt: currentPrompt,
-                        analysis: resultData.analysis,
-                        showDetails: false
-                      }]);
-                    } catch (fetchError) {
-                      console.error('Error fetching result:', fetchError);
-                      setError('Failed to retrieve synthesis result');
                     }
                     
                     setStreamingResults(null);

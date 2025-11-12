@@ -5,6 +5,11 @@ node_modules/
 
 # Testing
 /coverage
+__tests__/coverage/
+jest-coverage/
+*.lcov
+test-results/
+test-cost-tracking-data.json
 
 # Next.js
 /.next/
@@ -47,3 +52,14 @@ docs/architecture/TECHNICAL-COMPLEXITY-CONCERNS.md
 
 # Cost tracking data (local persistence)
 cost-tracking-data.json
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Deployment and build artifacts
+dist/
+.turbo/
